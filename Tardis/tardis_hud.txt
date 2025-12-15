@@ -1,0 +1,383 @@
+@name Tardis GUI System
+@inputs EGP:wirelink Tardis:entity
+@trigger all
+@strict
+
+@persist BoundPlayer:entity TabPos:number TabNames:array Bound:number ScrollPos:number FunctionNames:table ToggleView:number FunctionStore:table FunctionRenders:table TrackPlayer:entity TrackPlayerInt:number TabFuncs:array PrevTab:number
+
+function setFlight(Tardis:entity, State:number) {
+    if (Tardis:tardisFlying() == 1) {
+        if (State == 0) {
+            Tardis:tardisFlightmode()
+        }
+    } else {
+        if (State == 1) {
+            Tardis:tardisFlightmode()
+        }
+    }
+}
+
+function simpleToggleRender(State:number, ID:number, IsCurrent:number) {
+    if (State == 1) {
+        if (IsCurrent == 1) {
+            EGP:egpColor(ID, vec4(128,255,128,255))
+        } else {
+            EGP:egpColor(ID, vec4(64,127.5,64,255))
+        }
+    } else {
+        if (IsCurrent == 1) {
+            EGP:egpColor(ID, vec4(255,128,128,255))
+        } else {
+            EGP:egpColor(ID, vec4(127.5,64,64,255))
+        }
+    }
+}
+
+function init() {
+    #Setup tab names
+    TabNames = array()
+    TabNames:pushString("Travel")
+    TabNames:pushString("Controls")
+    TabNames:pushString("Utilities")
+    TabNames:pushString("Tracking Options")
+    TabNames:pushString("Track: Players")
+    TabNames:pushString("Track: NPCs")
+    TabNames:pushString("Track: Props")
+
+    TabFuncs = array()
+    TabFuncs[5, function] = function() {
+        let PlayerList = players()
+        let DisplayArray = FunctionNames[5, array]
+        DisplayArray:clear()
+        let FuncArray = FunctionStore[5, array]
+        FuncArray:clear()
+        foreach (Key:number, Ply:entity = PlayerList) {
+            DisplayArray:pushString(Ply:name())
+            const PlyID = Entity:id()
+            FuncArray:pushFunction(function(){
+                let TarPly = entity(PlyID)
+                Tardis:tardisSetDestination(TarPly:pos(), TarPly:angles())
+                if (Tardis:tardisInVortex() == 1) {
+                    Tardis:tardisMaterialise()
+                } else {
+                    Tardis:tardisLongflight(0)
+                    Tardis:tardisDemat(Tardis:pos())
+                }
+            })
+        }
+    }
+
+    TabFuncs[6, function] = function() {
+        let EntityList = entities()
+        let DisplayArray = FunctionNames[6, array]
+        DisplayArray:clear()
+        let FuncArray = FunctionStore[6, array]
+        FuncArray:clear()
+        foreach (Key:number, Entity:entity = EntityList) {  
+            if (Entity:isValid() == 1) {
+                if (Entity:isNPC() == 1) {
+                    DisplayArray:pushString(Entity:model())
+                    const EntID = Entity:id()
+                    FuncArray:pushFunction(function(){
+                        let TarEntity = entity(EntID)
+                        Tardis:tardisSetDestination(TarEntity:pos(), TarEntity:angles())
+                        if (Tardis:tardisInVortex() == 1) {
+                            Tardis:tardisMaterialise()
+                        } else {
+                            Tardis:tardisLongflight(0)
+                            Tardis:tardisDemat(Tardis:pos())
+                        }
+                    })
+                }
+            }  
+        }
+    }
+
+    #Setup function names
+    FunctionNames = table(
+        array("Call (Aimpos)", "Pickup", "Demat", "Remat"),
+        array("Flight", "Physlock", "Handbrake", "Vortex Flight"),
+        array("Door Switch", "Door Lock", "Repair", "Cloak", "Power", "Shields"),
+        array("Entity Owner"),
+        array(),
+        array(),
+        array()
+    )
+
+    #Setup actual functions
+    FunctionStore = table(
+        array(
+            function() {
+                setFlight(Tardis, 0)
+                Tardis:tardisSetDestination(BoundPlayer:aimPos(), BoundPlayer:angles()+ang(0,180,0))
+                if (Tardis:tardisInVortex() == 1) {
+                    Tardis:tardisMaterialise()
+                } else {
+                    Tardis:tardisLongflight(0)
+                    Tardis:tardisDemat(Tardis:pos())
+                }
+            },
+            function() {
+                Tardis:tardisSetDestination(BoundPlayer:pos(), BoundPlayer:angles())
+                if (Tardis:tardisInVortex() == 1) {
+                    Tardis:tardisMaterialise()
+                } else {
+                    Tardis:tardisLongflight(0)
+                    Tardis:tardisDemat(Tardis:pos())
+                }
+            },
+            function() {
+                Tardis:tardisLongflight(1)
+                Tardis:tardisDemat(Tardis:pos())
+            },
+            function() {
+                Tardis:tardisLongflight(1)
+                Tardis:tardisMaterialise()
+            }
+        ),
+        array(
+            function() {
+                Tardis:tardisFlightmode()
+            },
+            function() {
+                Tardis:tardisPhyslock()
+            },
+            function() {
+                Tardis:tardisHandbrake()
+            },
+            function() {
+                Tardis:tardisLongflight()
+            }
+        ),
+        array(
+            function() {
+                Tardis:tardisDoor()
+            },
+            function() {
+                Tardis:tardisLock()
+            },
+            function() {
+                Tardis:tardisSelfrepair()
+            },
+            function() {
+                Tardis:tardisPhase()
+            },
+            function() {
+                Tardis:tardisPower()
+            },
+            function() {
+                Tardis:tardisShields()
+            }
+        ),
+        array(
+            function() {
+
+            }
+        ),
+        array(),
+        array(),
+        array()
+    )
+
+    #Setup special render for certain functions
+    let FuncControls = array(
+        function(ID:number, FuncName:string, IsCurrent:number){
+            simpleToggleRender(Tardis:tardisFlying(), ID, IsCurrent)
+        },
+        function(ID:number, FuncName:string, IsCurrent:number){
+            simpleToggleRender(Tardis:tardisPhyslocked(), ID, IsCurrent)
+        },
+        function(ID:number, FuncName:string, IsCurrent:number){
+            simpleToggleRender(Tardis:tardisBraking(), ID, IsCurrent)
+        },
+        function(ID:number, FuncName:string, IsCurrent:number){
+            simpleToggleRender(Tardis:tardisLongflighted(), ID, IsCurrent)
+        }
+    )
+
+    let FuncUtils = array(
+        function(ID:number, FuncName:string, IsCurrent:number){
+            if (Tardis:tardisGetData("doorstatereal") == "true") {
+                EGP:egpSetText(ID, "Door Switch (Open)")
+                if (IsCurrent == 1) {
+                    EGP:egpColor(ID, vec4(128,255,128,255))
+                } else {
+                    EGP:egpColor(ID, vec4(64,127.5,64,255))
+                }
+            } else {
+                EGP:egpSetText(ID, "Door Switch (Closed)")
+                if (IsCurrent == 1) {
+                    EGP:egpColor(ID, vec4(255,128,128,255))
+                } else {
+                    EGP:egpColor(ID, vec4(127.5,64,64,255))
+                }
+            }
+        },
+        function(ID:number, FuncName:string, IsCurrent:number){
+            if (Tardis:tardisGetData("locked") == "true") {
+                EGP:egpSetText(ID, "Door Lock (Locked)")
+                if (IsCurrent == 1) {
+                    EGP:egpColor(ID, vec4(255,128,128,255))
+                } else {
+                    EGP:egpColor(ID, vec4(127.5,64,64,255))
+                }
+            } else {
+                EGP:egpSetText(ID, "Door Lock (Unlocked)")
+                if (IsCurrent == 1) {
+                    EGP:egpColor(ID, vec4(128,255,128,255))
+                } else {
+                    EGP:egpColor(ID, vec4(64,127.5,64,255))
+                }
+            }
+        },
+        function(ID:number, FuncName:string, IsCurrent:number){
+            let RepairStatus = Tardis:tardisSelfrepairing()
+            if (RepairStatus == 1) {
+                if (IsCurrent == 1) {
+                    EGP:egpColor(ID, vec4(128,255,128,255))
+                } else {
+                    EGP:egpColor(ID, vec4(64,127.5,64,255))
+                }
+            } elseif (RepairStatus == 2) {
+                if (IsCurrent == 1) {
+                    EGP:egpColor(ID, vec4(255,191.25,128,255))
+                } else {
+                    EGP:egpColor(ID, vec4(127.5,95.625,64,255))
+                }
+            } else {
+                if (IsCurrent == 1) {
+                    EGP:egpColor(ID, vec4(255,128,128,255))
+                } else {
+                    EGP:egpColor(ID, vec4(127.5,64,64,255))
+                }
+            }
+        },
+        function(ID:number, FuncName:string, IsCurrent:number){
+            simpleToggleRender(!(Tardis:tardisVisible()), ID, IsCurrent)
+        },
+        function(ID:number, FuncName:string, IsCurrent:number){
+            simpleToggleRender((Tardis:tardisPowered()), ID, IsCurrent)
+        },
+        function(ID:number, FuncName:string, IsCurrent:number){
+            simpleToggleRender((Tardis:tardisShieldsOn()), ID, IsCurrent)
+        }
+    )
+
+    FunctionRenders = table()
+    FunctionRenders[2, array] = FuncControls
+    FunctionRenders[3, array] = FuncUtils
+
+    #setup rest
+    PrevTab = -1
+    TabPos = 1
+    Bound = 1
+    ScrollPos = 1
+    ToggleView = 0
+    TrackFilter = 0
+}
+
+function draw() {
+    EGP:egpClear()
+    if (Bound == 1) {
+        let ScreenSize = egpScrSize(BoundPlayer)
+        let HalfSize = ScreenSize/2
+        let PrevTabName = TabNames[((TabPos-1)-1)%TabNames:count()+1, string]
+        let CurrTabName = TabNames[TabPos, string]
+        let NextTabName = TabNames[((TabPos+1)-1)%TabNames:count()+1, string]
+
+        EGP:egpCircle(1, vec2(HalfSize:x(), 0), vec2(180, 50))
+        EGP:egpColor(1, vec4(32,32,32, 192))
+
+        EGP:egpText(2, PrevTabName, vec2((HalfSize:x())-60, 10))
+        EGP:egpAlign(2, 1, 1)
+        EGP:egpColor(2, vec4(192,192,192, 192))
+
+        EGP:egpText(3, CurrTabName, vec2(HalfSize:x(), 30))
+        EGP:egpAlign(3, 1, 1)
+        EGP:egpColor(3, vec4(255,255,255, 255))
+
+        EGP:egpText(4, NextTabName, vec2((HalfSize:x())+60, 10))
+        EGP:egpAlign(4, 1, 1)
+        EGP:egpColor(4, vec4(192,192,192, 192))
+
+        print(PrevTab, TabPos)
+        if (PrevTab != TabPos) {
+            let TabFunc = TabFuncs[TabPos, function]
+            if (TabFunc) { TabFunc() }
+        }
+        if (ToggleView == 1) {
+            foreach (Key:number, FuncName:string = FunctionNames[TabPos, array]) {
+                let Count = Key-1
+                let RenderFunc = FunctionRenders[TabPos, array][Key, function]
+                EGP:egpText(5+Count, FuncName, vec2(HalfSize:x(), 60+(30*Count)))
+                EGP:egpAlign(5+Count, 1, 1)
+                if (RenderFunc) {
+                    RenderFunc(5+Count, FuncName, (Key == ScrollPos))
+                } else {
+                    EGP:egpAlign(5+Count, 1, 1)
+                    if (Key == ScrollPos) {
+                        EGP:egpColor(5+Count, vec4(192,192,192, 255))
+                    } else {
+                        EGP:egpColor(5+Count, vec4(96,96,96, 255))
+                    }
+                }
+            }
+        }
+        PrevTab = TabPos
+    }
+}
+
+if (BoundPlayer:isValid() == 0) {
+    print("Press +use on the chip to bind it to you")
+}
+
+event chipUsed(Player:entity) {
+    if (BoundPlayer:isValid() == 0) {
+        BoundPlayer = Player
+        init()
+        draw()
+    }
+}
+
+event keyPressed(Player:entity, Key:string, Down:number, Bind:string) {
+    if (Bound == 1) {
+        if (BoundPlayer == Player) {
+            if (Down == 1) {
+                if (Key == "pad_6") {
+                    TabPos = ((TabPos+1)-1)%TabNames:count()+1
+                    ScrollPos = 1
+                    draw()
+
+                } elseif (Key == "pad_4") {
+                    TabPos = ((TabPos-1)-1)%TabNames:count()+1
+                    ScrollPos = 1
+                    draw()
+                } elseif (Key == "pad_5") {
+                    if (ToggleView == 0) {
+                        ToggleView = 1
+                    } else {
+                        let Func = FunctionStore[TabPos, array][ScrollPos, function]
+                        if (Func) {
+                            Func()
+                        }
+                    }
+                    draw()
+                } elseif (Key == "pad_2") {
+                    if (ToggleView == 1) {
+                        ScrollPos = ((ScrollPos+1)-1)%FunctionNames[TabPos, array]:count()+1
+                    } else {
+                        ToggleView =1
+                    }
+                    draw()
+                } elseif (Key == "pad_8") {
+                    if (ToggleView == 1) {
+                        ScrollPos = ((ScrollPos-1)-1)%FunctionNames[TabPos, array]:count()+1
+                    } else {
+                        ToggleView =1
+                    }
+                    draw()
+                }
+            }
+        }
+    }
+}
