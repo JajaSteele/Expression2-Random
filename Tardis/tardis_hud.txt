@@ -53,7 +53,8 @@ function init() {
         FuncArray:clear()
         foreach (Key:number, Ply:entity = PlayerList) {
             DisplayArray:pushString(Ply:name())
-            const PlyID = Entity:id()
+            let PlyID = Ply:id()
+            print(PlyID)
             FuncArray:pushFunction(function(){
                 let TarPly = entity(PlyID)
                 Tardis:tardisSetDestination(TarPly:pos(), TarPly:angles())
@@ -77,7 +78,7 @@ function init() {
             if (Entity:isValid() == 1) {
                 if (Entity:isNPC() == 1) {
                     DisplayArray:pushString(Entity:model())
-                    const EntID = Entity:id()
+                    let EntID = Entity:id()
                     FuncArray:pushFunction(function(){
                         let TarEntity = entity(EntID)
                         Tardis:tardisSetDestination(TarEntity:pos(), TarEntity:angles())
