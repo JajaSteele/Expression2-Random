@@ -3,7 +3,7 @@
 @trigger all
 @strict
 
-@persist TrackFilters:table BoundPlayer:entity TabPos:number TabNames:array Bound:number ScrollPos:number FunctionNames:table ToggleView:number FunctionStore:table FunctionRenders:table TrackPlayer:entity TrackPlayerInt:number TabFuncs:array PrevTab:number PlayerClickList:array
+@persist DrawnEntries:number TrackFilters:table BoundPlayer:entity TabPos:number TabNames:array Bound:number ScrollPos:number FunctionNames:table ToggleView:number FunctionStore:table FunctionRenders:table TrackPlayer:entity TrackPlayerInt:number TabFuncs:array PrevTab:number PlayerClickList:array
 
 function setFlight(Tardis:entity, State:number) {
     if (Tardis:tardisFlying() == 1) {
@@ -34,8 +34,8 @@ function simpleToggleRender(State:number, ID:number, IsCurrent:number) {
 }
 
 function init() {
-
     TrackFilters = table()
+    DrawnEntries = 0
     
     TrackFilters["HideWeapons", number] = 1
 
@@ -82,7 +82,7 @@ function init() {
         FuncArray:clear()
         foreach (Key:number, Entity:entity = EntityList) {  
             if (Entity:isValid() & Entity:isNPC()) {
-                DisplayArray:pushString(Entity:model())
+                DisplayArray:pushString("[" + toString(Entity:id()) + "] " + Entity:model():match(".+/(.+)")[1, string])
                 let EntID = Entity:id()
                 FuncArray:pushFunction(function(){
                     let TarEntity = entity(EntID)
@@ -258,15 +258,19 @@ function init() {
     let FuncControls = array(
         function(ID:number, FuncName:string, IsCurrent:number){
             simpleToggleRender(Tardis:tardisFlying(), ID, IsCurrent)
+            return FuncName:length()
         },
         function(ID:number, FuncName:string, IsCurrent:number){
             simpleToggleRender(Tardis:tardisPhyslocked(), ID, IsCurrent)
+            return FuncName:length()
         },
         function(ID:number, FuncName:string, IsCurrent:number){
             simpleToggleRender(Tardis:tardisBraking(), ID, IsCurrent)
+            return FuncName:length()
         },
         function(ID:number, FuncName:string, IsCurrent:number){
             simpleToggleRender(Tardis:tardisLongflighted(), ID, IsCurrent)
+            return FuncName:length()
         }
     )
 
@@ -279,6 +283,7 @@ function init() {
                 } else {
                     EGP:egpColor(ID, vec4(64,127.5,64,255))
                 }
+                return 18
             } else {
                 EGP:egpSetText(ID, "Door Switch (Closed)")
                 if (IsCurrent == 1) {
@@ -286,6 +291,7 @@ function init() {
                 } else {
                     EGP:egpColor(ID, vec4(127.5,64,64,255))
                 }
+                return 20
             }
         },
         function(ID:number, FuncName:string, IsCurrent:number){
@@ -296,6 +302,7 @@ function init() {
                 } else {
                     EGP:egpColor(ID, vec4(127.5,64,64,255))
                 }
+                return 18
             } else {
                 EGP:egpSetText(ID, "Door Lock (Unlocked)")
                 if (IsCurrent == 1) {
@@ -303,6 +310,7 @@ function init() {
                 } else {
                     EGP:egpColor(ID, vec4(64,127.5,64,255))
                 }
+                return 20
             }
         },
         function(ID:number, FuncName:string, IsCurrent:number){
@@ -326,33 +334,44 @@ function init() {
                     EGP:egpColor(ID, vec4(127.5,64,64,255))
                 }
             }
+            return FuncName:length()
         },
         function(ID:number, FuncName:string, IsCurrent:number){
             simpleToggleRender(!(Tardis:tardisVisible()), ID, IsCurrent)
+            return FuncName:length()
         },
         function(ID:number, FuncName:string, IsCurrent:number){
             simpleToggleRender((Tardis:tardisPowered()), ID, IsCurrent)
+            return FuncName:length()
         },
         function(ID:number, FuncName:string, IsCurrent:number){
             simpleToggleRender((Tardis:tardisShieldsOn()), ID, IsCurrent)
+            return FuncName:length()
         }
     )
 
     let FuncTrackOpts = array(
         function(ID:number, FuncName:string, IsCurrent:number) {
+            let Size = 0
             if (TrackPlayer) {
-                EGP:egpSetText(ID, "Filter Owner [" + TrackPlayer:name() + "]")
+                let Text = "Filter Owner [" + TrackPlayer:name() + "]"
+                EGP:egpSetText(ID, Text)
+                Size = Text:length()
             } else {
-                EGP:egpSetText(ID, "Filter Owner [NONE]")
+                let Text = "Filter Owner [NONE]"
+                EGP:egpSetText(ID, Text)
+                Size = Text:length()
             }
             if (IsCurrent) {
                 EGP:egpColor(ID, vec4(192,192,192, 255))
             } else {
                 EGP:egpColor(ID, vec4(96,96,96, 255))
             }
+            return Size
         },
         function(ID:number, FuncName:string, IsCurrent:number){
             simpleToggleRender((TrackFilters["HideWeapons", number]), ID, IsCurrent)
+            return FuncName:length()
         }
     )
 
@@ -367,12 +386,14 @@ function init() {
     TabPos = 1
     Bound = 1
     ScrollPos = 1
+    FuncsPage = 1
     ToggleView = 0
     TrackFilter = 0
 }
 
 function draw() {
     EGP:egpClear()
+    EGP:egpDrawTopLeft(1)
     if (Bound == 1) {
         let ScreenSize = egpScrSize(BoundPlayer)
         let HalfSize = ScreenSize/2
@@ -395,6 +416,14 @@ function draw() {
         EGP:egpAlign(4, 1, 1)
         EGP:egpColor(4, vec4(192,192,192, 192))
 
+        EGP:egpRoundedBox(5, vec2(HalfSize:x()-100, -20), vec2(200, 200))
+        EGP:egpRadius(5, 20)
+        EGP:egpColor(5, vec4(32,32,32, 0))
+
+        EGP:egpText(6, "1/1", vec2((HalfSize:x()), -50))
+        EGP:egpAlign(6, 1, 1)
+        EGP:egpColor(6, vec4(255,255,255, 255))
+
         if (PrevTab != TabPos) {
             let TabFunc = TabFuncs[TabPos, function]
             if (TabFunc) { TabFunc() }
@@ -402,35 +431,56 @@ function draw() {
         if (ToggleView == 1) {
             let FuncNames = FunctionNames[TabPos, array]
             if (!timerExists("FunctionDrawTimer")) {
-                let Index = 1
+                let EntryCount = 0
                 let Max = FuncNames:count()
                 let Log = array()
+                let PagePos = floor((ScrollPos-1)/15)
+                let Index = 1 + (PagePos*15)
+                let MaxWidth = 0
                 timer("FunctionDrawTimer", 0, 0, function() {
                     while (Index < Max+1) {
                         if (perf(90)) {
                             let FuncName = FuncNames[Index, string]
-                            let Count = Index-1
+                            let Count = EntryCount
+                            let YPos = 80+(30*Count)
+                            if (EntryCount >= 15) {
+                                Index = Max+1
+                                break
+                            }
+                            let ID = 7+Count
                             let RenderFunc = FunctionRenders[TabPos, array][Index, function]
-                            EGP:egpText(5+Count, FuncName, vec2(HalfSize:x(), 60+(30*Count)))
-                            EGP:egpFont(5+Count, "DefaultFixed")
-                            EGP:egpAlign(5+Count, 1, 1)
+                            if (FuncName:length() > MaxWidth) {
+                                MaxWidth = FuncName:length()
+                            }
+                            EGP:egpText(ID, FuncName, vec2(HalfSize:x(), YPos))
+                            EGP:egpFont(ID, "Consolas")
+                            EGP:egpAlign(ID, 1, 1)
                             if (RenderFunc) {
-                                RenderFunc(5+Count, FuncName, (Index == ScrollPos))
+                                let Width = RenderFunc(ID, FuncName, (Index == ScrollPos))[number]
+                                if (Width > MaxWidth) {
+                                    MaxWidth = Width
+                                }
                             } else {
                                 if (Index == ScrollPos) {
-                                    EGP:egpColor(5+Count, vec4(192,192,192, 255))
+                                    EGP:egpColor(ID, vec4(192,192,192, 255))
                                 } else {
-                                    EGP:egpColor(5+Count, vec4(96,96,96, 255))
+                                    EGP:egpColor(ID, vec4(96,96,96, 255))
                                 }
                             }
-                            print(EGP:egpSize(5+Count))
                             Index++
+                            EntryCount = EntryCount+1
                         } else {
                             break
                         }
                     }
                     if (Index > Max) {
                         stoptimer("FunctionDrawTimer")
+                        DrawnEntries = EntryCount
+                        EGP:egpSize(5, vec2((MaxWidth*8)+30, 20+((EntryCount-1)*30)+20+30))
+                        EGP:egpPos(5, vec2(HalfSize:x() - ((MaxWidth*4)+15), 60))
+                        EGP:egpColor(5, vec4(32,32,32, 192))
+
+                        EGP:egpText(6, toString(PagePos+1) + "/" + toString(ceil(FuncNames:count()/15)), vec2(HalfSize:x(), 60 + (20+((EntryCount-1)*30)+20+15)))
                     }
                 })
             }
@@ -438,16 +488,16 @@ function draw() {
             foreach (Key:number, FuncName:string = FunctionNames[TabPos, array]) {
                 let Count = Key-1
                 let RenderFunc = FunctionRenders[TabPos, array][Key, function]
-                EGP:egpText(5+Count, FuncName, vec2(HalfSize:x(), 60+(30*Count)))
-                EGP:egpAlign(5+Count, 1, 1)
+                EGP:egpText(ID, FuncName, vec2(HalfSize:x(), 60+(30*Count)))
+                EGP:egpAlign(ID, 1, 1)
                 if (RenderFunc) {
-                    RenderFunc(5+Count, FuncName, (Key == ScrollPos))
+                    RenderFunc(ID, FuncName, (Key == ScrollPos))
                 } else {
-                    EGP:egpAlign(5+Count, 1, 1)
+                    EGP:egpAlign(ID, 1, 1)
                     if (Key == ScrollPos) {
-                        EGP:egpColor(5+Count, vec4(192,192,192, 255))
+                        EGP:egpColor(ID, vec4(192,192,192, 255))
                     } else {
-                        EGP:egpColor(5+Count, vec4(96,96,96, 255))
+                        EGP:egpColor(ID, vec4(96,96,96, 255))
                     }
                 }
             }
@@ -495,17 +545,30 @@ event keyPressed(Player:entity, Key:string, Down:number, Bind:string) {
                     draw()
                 } elseif (Key == "pad_2") {
                     if (ToggleView == 1) {
-                        ScrollPos = ((ScrollPos+1)-1)%FunctionNames[TabPos, array]:count()+1
+                        #ScrollPos = ((ScrollPos+1)-1)%max(DrawnEntries, 1)+1
+                        ScrollPos = clamp(ScrollPos+1, 0, FunctionNames[TabPos, array]:count()+1)
+                        if (ScrollPos > DrawnEntries) {
+                            if (ScrollPos > FunctionNames[TabPos, array]:count()) {
+                                ScrollPos = 1
+                            }
+                        }
                     } else {
                         ToggleView =1
                     }
                     draw()
                 } elseif (Key == "pad_8") {
                     if (ToggleView == 1) {
-                        ScrollPos = ((ScrollPos-1)-1)%FunctionNames[TabPos, array]:count()+1
+                        #ScrollPos = ((ScrollPos-1)-1)%max(DrawnEntries, 1)+1
+                        ScrollPos = clamp(ScrollPos-1, 0, FunctionNames[TabPos, array]:count())
+                        if (ScrollPos == 0) {
+                            ScrollPos = FunctionNames[TabPos, array]:count()
+                        }
                     } else {
                         ToggleView =1
                     }
+                    draw()
+                } elseif (Key == "pad_decimal") {
+                    ToggleView = 0
                     draw()
                 }
             }
