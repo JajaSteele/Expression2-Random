@@ -3,7 +3,7 @@
 @trigger all
 @strict
 
-@persist BoundPlayer:entity TabPos:number TabNames:array Bound:number ScrollPos:number FunctionNames:table ToggleView:number FunctionStore:table FunctionRenders:table TrackPlayer:entity TrackPlayerInt:number TabFuncs:array PrevTab:number
+@persist TrackFilters:table BoundPlayer:entity TabPos:number TabNames:array Bound:number ScrollPos:number FunctionNames:table ToggleView:number FunctionStore:table FunctionRenders:table TrackPlayer:entity TrackPlayerInt:number TabFuncs:array PrevTab:number PlayerClickList:array
 
 function setFlight(Tardis:entity, State:number) {
     if (Tardis:tardisFlying() == 1) {
@@ -34,6 +34,13 @@ function simpleToggleRender(State:number, ID:number, IsCurrent:number) {
 }
 
 function init() {
+
+    TrackFilters = table()
+    
+    TrackFilters["HideWeapons", number] = 1
+
+    PlayerClickList = array()
+
     #Setup tab names
     TabNames = array()
     TabNames:pushString("Travel")
@@ -53,10 +60,9 @@ function init() {
         FuncArray:clear()
         foreach (Key:number, Ply:entity = PlayerList) {
             DisplayArray:pushString(Ply:name())
-            let PlyID = Ply:id()
-            print(PlyID)
+            PlayerClickList[Key, entity] = Ply
             FuncArray:pushFunction(function(){
-                let TarPly = entity(PlyID)
+                let TarPly = PlayerClickList[ScrollPos, entity]
                 Tardis:tardisSetDestination(TarPly:pos(), TarPly:angles())
                 if (Tardis:tardisInVortex() == 1) {
                     Tardis:tardisMaterialise()
@@ -75,8 +81,71 @@ function init() {
         let FuncArray = FunctionStore[6, array]
         FuncArray:clear()
         foreach (Key:number, Entity:entity = EntityList) {  
-            if (Entity:isValid() == 1) {
-                if (Entity:isNPC() == 1) {
+            if (Entity:isValid() & Entity:isNPC()) {
+                DisplayArray:pushString(Entity:model())
+                let EntID = Entity:id()
+                FuncArray:pushFunction(function(){
+                    let TarEntity = entity(EntID)
+                    Tardis:tardisSetDestination(TarEntity:pos(), TarEntity:angles())
+                    if (Tardis:tardisInVortex() == 1) {
+                        Tardis:tardisMaterialise()
+                    } else {
+                        Tardis:tardisLongflight(0)
+                        Tardis:tardisDemat(Tardis:pos())
+                    }
+                })
+            }  
+        }
+    }
+
+    TabFuncs[7, function] = function() {
+        let EntityList = entities()
+        let DisplayArray = FunctionNames[7, array]
+        DisplayArray:clear()
+        let FuncArray = FunctionStore[7, array]
+        FuncArray:clear()
+
+        if (!timerExists("FetchPropsTimer")) {
+            let Index = 1
+            let Max = EntityList:count()
+            let Log = array()
+            timer("FetchPropsTimer", 0, 0, function() {
+                while (Index < Max+1) {
+                    if (perf(90)) {
+                        let Entity = EntityList[Index, entity]
+                        if (Entity:isValid() == 1) {
+                            if (!(Entity:isNPC() | Entity:isPlayer())) {
+                                if ((!TrackPlayer:isValid() | (TrackPlayer == Entity:owner())) & (!(TrackFilters["HideWeapons", number] & Entity:isWeapon()))) {
+                                    Log:pushString(Index + "/" + Max + " = " + toString(Entity) + " Owner: " + toString(Entity:owner()))
+                                    DisplayArray:pushString("[" + toString(Entity:id()) + "] " + Entity:model():match(".+/(.+)")[1, string])
+                                    let EntID = Entity:id()
+                                    FuncArray:pushFunction(function(){
+                                        let TarEntity = entity(EntID)
+                                        Tardis:tardisSetDestination(TarEntity:pos(), TarEntity:angles())
+                                        if (Tardis:tardisInVortex() == 1) {
+                                            Tardis:tardisMaterialise()
+                                        } else {
+                                            Tardis:tardisLongflight(0)
+                                            Tardis:tardisDemat(Tardis:pos())
+                                        }
+                                    })
+                                }
+                            }
+                        } 
+                        Index++
+                    } else {
+                        break
+                    }
+                }
+                if (Index >= Max) {
+                    stoptimer("FetchPropsTimer")
+                }
+            })
+        }
+    
+        #[ foreach (Key:number, Entity:entity = EntityList) {  
+             if (Entity:isValid() == 1) {
+                if (Entity:isNPC() == 0) {
                     DisplayArray:pushString(Entity:model())
                     let EntID = Entity:id()
                     FuncArray:pushFunction(function(){
@@ -90,8 +159,8 @@ function init() {
                         }
                     })
                 }
-            }  
-        }
+            } 
+        } ]#
     }
 
     #Setup function names
@@ -99,7 +168,7 @@ function init() {
         array("Call (Aimpos)", "Pickup", "Demat", "Remat"),
         array("Flight", "Physlock", "Handbrake", "Vortex Flight"),
         array("Door Switch", "Door Lock", "Repair", "Cloak", "Power", "Shields"),
-        array("Entity Owner"),
+        array("Filter Owner", "Ignore Weapons"),
         array(),
         array(),
         array()
@@ -110,7 +179,7 @@ function init() {
         array(
             function() {
                 setFlight(Tardis, 0)
-                Tardis:tardisSetDestination(BoundPlayer:aimPos(), BoundPlayer:angles()+ang(0,180,0))
+                Tardis:tardisSetDestination(BoundPlayer:aimPos()+vec(0,0,5), BoundPlayer:angles()+ang(0,180,0))
                 if (Tardis:tardisInVortex() == 1) {
                     Tardis:tardisMaterialise()
                 } else {
@@ -172,7 +241,12 @@ function init() {
         ),
         array(
             function() {
-
+                let PlayerList = players()
+                TrackPlayerInt = (TrackPlayerInt+1) % (PlayerList:count()+1)
+                TrackPlayer = PlayerList[TrackPlayerInt, entity]
+            },
+            function() {
+                TrackFilters["HideWeapons", number] = !TrackFilters["HideWeapons", number]
             }
         ),
         array(),
@@ -264,9 +338,29 @@ function init() {
         }
     )
 
+    let FuncTrackOpts = array(
+        function(ID:number, FuncName:string, IsCurrent:number) {
+            if (TrackPlayer) {
+                EGP:egpSetText(ID, "Filter Owner [" + TrackPlayer:name() + "]")
+            } else {
+                EGP:egpSetText(ID, "Filter Owner [NONE]")
+            }
+            if (IsCurrent) {
+                EGP:egpColor(ID, vec4(192,192,192, 255))
+            } else {
+                EGP:egpColor(ID, vec4(96,96,96, 255))
+            }
+        },
+        function(ID:number, FuncName:string, IsCurrent:number){
+            simpleToggleRender((TrackFilters["HideWeapons", number]), ID, IsCurrent)
+        }
+    )
+
     FunctionRenders = table()
     FunctionRenders[2, array] = FuncControls
     FunctionRenders[3, array] = FuncUtils
+    FunctionRenders[4, array] = FuncTrackOpts
+    
 
     #setup rest
     PrevTab = -1
@@ -301,12 +395,46 @@ function draw() {
         EGP:egpAlign(4, 1, 1)
         EGP:egpColor(4, vec4(192,192,192, 192))
 
-        print(PrevTab, TabPos)
         if (PrevTab != TabPos) {
             let TabFunc = TabFuncs[TabPos, function]
             if (TabFunc) { TabFunc() }
         }
         if (ToggleView == 1) {
+            let FuncNames = FunctionNames[TabPos, array]
+            if (!timerExists("FunctionDrawTimer")) {
+                let Index = 1
+                let Max = FuncNames:count()
+                let Log = array()
+                timer("FunctionDrawTimer", 0, 0, function() {
+                    while (Index < Max+1) {
+                        if (perf(90)) {
+                            let FuncName = FuncNames[Index, string]
+                            let Count = Index-1
+                            let RenderFunc = FunctionRenders[TabPos, array][Index, function]
+                            EGP:egpText(5+Count, FuncName, vec2(HalfSize:x(), 60+(30*Count)))
+                            EGP:egpFont(5+Count, "DefaultFixed")
+                            EGP:egpAlign(5+Count, 1, 1)
+                            if (RenderFunc) {
+                                RenderFunc(5+Count, FuncName, (Index == ScrollPos))
+                            } else {
+                                if (Index == ScrollPos) {
+                                    EGP:egpColor(5+Count, vec4(192,192,192, 255))
+                                } else {
+                                    EGP:egpColor(5+Count, vec4(96,96,96, 255))
+                                }
+                            }
+                            print(EGP:egpSize(5+Count))
+                            Index++
+                        } else {
+                            break
+                        }
+                    }
+                    if (Index > Max) {
+                        stoptimer("FunctionDrawTimer")
+                    }
+                })
+            }
+            #[
             foreach (Key:number, FuncName:string = FunctionNames[TabPos, array]) {
                 let Count = Key-1
                 let RenderFunc = FunctionRenders[TabPos, array][Key, function]
@@ -323,6 +451,7 @@ function draw() {
                     }
                 }
             }
+            ]#
         }
         PrevTab = TabPos
     }
@@ -335,6 +464,7 @@ if (BoundPlayer:isValid() == 0) {
 event chipUsed(Player:entity) {
     if (BoundPlayer:isValid() == 0) {
         BoundPlayer = Player
+        print("Bound to " + Player:name())
         init()
         draw()
     }
