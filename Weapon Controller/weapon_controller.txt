@@ -1,0 +1,75 @@
+@name Weapon Controller
+@inputs EGPM:wirelink UM:entity TempTarget:entity
+@outputs TargetPos:vector TargetEnt:entity
+@trigger none
+@strict
+
+@persist TargetData:table
+
+function init() {
+    TargetData = table()
+    TargetEnt = TempTarget
+}
+
+function drawMain() {
+    if (EGPM) {
+        let ScreenSize = EGPM:egpSize()
+        let HalfSize = ScreenSize/2
+        EGPM:egpClear()
+        EGPM:egpText(1, "Main Monitor", vec2(HalfSize:x(), 5))
+        EGPM:egpSize(1, 45)
+        EGPM:egpAlign(1, 1, 0)
+
+        if (TargetEnt) {
+            EGPM:egpText(2, "Entity Data", vec2(5, 90))
+            EGPM:egpSize(2, 45)
+            EGPM:egpAlign(2, 0, 1)
+
+            if (TargetEnt:isPlayer()) {
+                EGPM:egpText(3, "Name: " + TargetEnt:name(), vec2(5, 125))
+                EGPM:egpText(5, format("Health: %.0f , Suit: %.0f", TargetEnt:health(), TargetEnt:armor()), vec2(5, 175))
+            } else {
+                EGPM:egpText(3, "Class: " + TargetEnt:getClass(), vec2(5, 125))
+                EGPM:egpText(5, format("Health: %.0f", TargetEnt:health()), vec2(5, 175))
+            }
+            EGPM:egpSize(3, 25)
+            EGPM:egpAlign(3, 0, 1)
+
+            EGPM:egpText(4, "Model: " + TargetEnt:model():match(".+/(.+)")[1, string], vec2(5, 150))
+            EGPM:egpSize(4, 25)
+            EGPM:egpAlign(4, 0, 1)
+
+            
+            EGPM:egpSize(5, 25)
+            EGPM:egpAlign(5, 0, 1)
+
+            EGPM:egpText(6, "Entity Pos", vec2(5, 225))
+            EGPM:egpSize(6, 45)
+            EGPM:egpAlign(6, 0, 1)
+
+            EGPM:egpText(7, format("Distance: %.0f", TargetPos:distance(entity():pos())), vec2(5, 260))
+            EGPM:egpSize(7, 25)
+            EGPM:egpAlign(7, 0, 1)
+
+            EGPM:egpText(8, format("X: %.1f   Y: %.1f   Z: %.1f", TargetPos:x(), TargetPos:y(), TargetPos:z()), vec2(5, 285))
+            EGPM:egpSize(8, 25)
+            EGPM:egpAlign(8, 0, 1)
+
+            let TargetAngles = TargetEnt:angles()
+            EGPM:egpText(9, format("Pitch: %.0f°   Roll: %.0f°   Yaw: %.0f°", TargetAngles:pitch(), TargetAngles:roll(), TargetAngles:yaw()), vec2(5, 305))
+            EGPM:egpSize(9, 25)
+            EGPM:egpAlign(9, 0, 1)
+        } else {
+            EGPM:egpText(2, "No Entity", vec2(5, 90))
+            EGPM:egpSize(2, 45)
+            EGPM:egpAlign(2, 0, 1)
+        }
+
+        #EGPM:egpText(5, format("X: %.1f Y: %.1f Z: %.1f", TargetPos:x(), TargetPos:y(), TargetPos:z()), vec2(5, 175))
+        #EGPM:egpSize(5, 25)
+        #EGPM:egpAlign(5, 0, 1)
+    }
+}
+
+init()
+drawMain()
