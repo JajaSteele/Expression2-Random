@@ -1,0 +1,77 @@
+@name Weapon Controller
+@inputs EGP_Main:wirelink User_Main:entity
+@trigger none
+@strict
+
+@persist RatioX:number RatioY:number HitPosList:array HitPosIndex:number HitPosWorldList:array
+
+function init() {
+    RatioX = 1
+    RatioY = 1
+    HitPosList = array()
+    HitPosIndex = 1
+}
+
+function egpCross(StartID:number, Pos:vector2, Size:number) {
+    EGP_Main:egpLine(StartID, Pos + vec2(0,-Size), Pos + vec2(0, Size))
+    EGP_Main:egpLine(StartID+1, Pos + vec2(-Size, 0), Pos + vec2(Size, 0))
+}
+
+function draw() {
+    let ScreenSize = EGP_Main:egpSize()
+    let HalfSize = ScreenSize/2
+    EGP_Main:egpClear()
+    EGP_Main:egpDrawTopLeft(1)
+    EGP_Main:egpText(1, toString(HitPosList[HitPosIndex-1, vector2]) + toString(HitPosWorldList[HitPosIndex-1, vector]) + "HitPosIndex: " + toString(HitPosIndex), vec2(0,0))
+
+    EGP_Main:egpBoxOutline(2, vec2(1,1), ScreenSize)
+
+    switch (HitPosIndex) {
+        case 1,
+            egpCross(3, vec2((HalfSize:x())-128, (HalfSize:y())-128), 5)
+            break
+        case 2,
+            egpCross(3, vec2((HalfSize:x())+128, (HalfSize:y())-128), 5)
+            break
+        case 3,
+            egpCross(3, vec2((HalfSize:x())+128, (HalfSize:y())+128), 5)
+            break
+        case 4,
+            egpCross(3, vec2((HalfSize:x())-128, (HalfSize:y())+128), 5)
+            break
+        case 5,
+            let Vertical1 = HitPosWorldList[1, vector]:distance(HitPosWorldList[4, vector])
+            let Horizontal1 = HitPosWorldList[1, vector]:distance(HitPosWorldList[2, vector])
+
+            let Vertical2 = HitPosWorldList[2, vector]:distance(HitPosWorldList[3, vector])
+            let Horizontal2 = HitPosWorldList[4, vector]:distance(HitPosWorldList[3, vector])
+            
+            let Ratio = array(Horizontal1, Horizontal2):average()/array(Vertical1, Vertical2):average()
+            print(Ratio)
+            print("X" + toString(ScreenSize:x()*Ratio) + " Y" + toString(ScreenSize:y()))
+            break
+        default,
+
+    }
+}
+
+event input(Input:string) {
+    if(Input == "User_Main") { # E2 triggered by User input changing
+        if(User_Main) { # if User is valid
+            # To arrive here, the User input must have changed, and is currently a valid entity (so someone used the screen)
+            let CursorPos = EGP_Main:egpCursor(User_Main)
+            print("Click")
+            if (HitPosIndex < 5) {
+                HitPosList[HitPosIndex, vector2] = CursorPos
+                HitPosWorldList[HitPosIndex, vector] = User_Main:aimPos()
+                HitPosIndex++
+                draw()
+            } elseif (HitPosIndex == 5) {
+                draw()
+            }
+        }
+    }
+}
+
+init()
+draw()
