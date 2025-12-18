@@ -179,7 +179,7 @@ function init() {
         array(
             function() {
                 setFlight(Tardis, 0)
-                Tardis:tardisSetDestination(BoundPlayer:aimPos()+vec(0,0,5), BoundPlayer:angles()+ang(0,180,0))
+                Tardis:tardisSetDestination(BoundPlayer:aimPos()+vec(0,0,0.5), BoundPlayer:angles()+ang(0,180,0))
                 if (Tardis:tardisInVortex() == 1) {
                     Tardis:tardisMaterialise()
                 } else {
