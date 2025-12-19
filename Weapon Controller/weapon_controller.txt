@@ -4,11 +4,17 @@
 @trigger none
 @strict
 
-@persist TargetData:table
+@persist TargetData:table ButtonData:table
 
 function init() {
     TargetData = table()
     TargetEnt = TempTarget
+
+    ButtonData[EGPM:entity():id(), array] = array()
+}
+
+function addButton(EGP:wirelink, ID:number, Pos1:vector2, Pos2:vector2, Func:function) {
+    EGP:egpBoxOutline(ID, Pos1, Pos2-Pos1)
 }
 
 function drawMain() {
@@ -16,6 +22,7 @@ function drawMain() {
         let ScreenSize = EGPM:egpSize()
         let HalfSize = ScreenSize/2
         EGPM:egpClear()
+        EGPM:egpDrawTopLeft(1)
         EGPM:egpText(1, "Main Monitor", vec2(HalfSize:x(), 5))
         EGPM:egpSize(1, 45)
         EGPM:egpAlign(1, 1, 0)
@@ -56,9 +63,12 @@ function drawMain() {
             EGPM:egpAlign(8, 0, 1)
 
             let TargetAngles = TargetEnt:angles()
-            EGPM:egpText(9, format("Pitch: %.0f°   Roll: %.0f°   Yaw: %.0f°", TargetAngles:pitch(), TargetAngles:roll(), TargetAngles:yaw()), vec2(5, 305))
+            EGPM:egpText(9, format("Pitch: %.0f°   Roll: %.0f°   Yaw: %.0f°", TargetAngles:pitch(), TargetAngles:roll(), TargetAngles:yaw()), vec2(5, 310))
             EGPM:egpSize(9, 25)
             EGPM:egpAlign(9, 0, 1)
+
+            addButton(EGPM, 10, vec2(5, ScreenSize:y()-64), vec2(ScreenSize:x()-68, ScreenSize:y()-1), function() {})
+            addButton(EGPM, 11, vec2(ScreenSize:x()-69, ScreenSize:y()-64), vec2(ScreenSize:x()-4, ScreenSize:y()-1), function() {})
         } else {
             EGPM:egpText(2, "No Entity", vec2(5, 90))
             EGPM:egpSize(2, 45)
