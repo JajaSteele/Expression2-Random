@@ -1,4 +1,4 @@
-@name Weapon Controller
+@name RatioFinder
 @inputs EGP_Main:wirelink User_Main:entity
 @trigger none
 @strict
