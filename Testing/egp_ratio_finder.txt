@@ -47,8 +47,8 @@ function draw() {
             let Horizontal2 = HitPosWorldList[4, vector]:distance(HitPosWorldList[3, vector])
             
             let Ratio = array(Horizontal1, Horizontal2):average()/array(Vertical1, Vertical2):average()
-            print(Ratio)
-            print("X" + toString(ScreenSize:x()*Ratio) + " Y" + toString(ScreenSize:y()))
+            print(toString(vec2(512*Ratio, 512)))
+            EGP_Main:egpResolution(vec2(0,0), vec2(512, 512*Ratio))
             break
         default,
 
